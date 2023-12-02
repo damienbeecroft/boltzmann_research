@@ -6,7 +6,7 @@ def sweep(fp,fm,dfdu,a,s,u,dx,x,n):
     d0 = 2/3
     d1 = 1/3
     eps = 1e-6
-    # Forward Sweep
+    
     for i in range(2,n-2):
         # Creating the left flux (\hat{f}_{j-1/2})
         # Positive flux
@@ -116,10 +116,10 @@ def weno3(fp,fm,dfdu,s,x,u,dx):
     a = np.max(np.abs(dfdu(u[2:-2])))
     u0 = u
     u1 = np.copy(u0)
-    u1,a = sweep(fp,fm,dfdu,a,s,u1,dx,x,n) # forward sweep
+    u1,a = sweep(fp,fm,dfdu,a,s,u1,dx,x,n) 
 
     u2 = np.copy(u1)
-    u2,a = sweep(fp,fm,dfdu,a,s,u2,dx,x,n) # forward sweep
+    u2,a = sweep(fp,fm,dfdu,a,s,u2,dx,x,n) 
 
     q1 = (np.linalg.norm(u2 - u1) + dx**3)/np.linalg.norm(u1 - u0)
     q2 = np.linalg.norm(u2 - u1) - dx**4
@@ -127,7 +127,7 @@ def weno3(fp,fm,dfdu,s,x,u,dx):
     while((q1 < 1) or (q2 > 0)):
         u0 = np.copy(u1)
         u1 = np.copy(u2)
-        u2,a = sweep(fp,fm,dfdu,a,s,u2,dx,x,n) # forward sweep
+        u2,a = sweep(fp,fm,dfdu,a,s,u2,dx,x,n) 
         q1 = (np.linalg.norm(u2 - u1) + dx**3)/np.linalg.norm(u1 - u0)
         q2 = np.linalg.norm(u2 - u1) - dx**4
         iter += 1

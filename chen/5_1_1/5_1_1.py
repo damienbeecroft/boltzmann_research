@@ -40,7 +40,7 @@ if __name__=="__main__":
         u = np.concatenate((np.sin(x[:2]),b*np.sin(x[2:-2]),np.sin(x[-2:])))
         iter, sol = w3.weno3(fp,fm,dfdu,s,x,u,dx)
         error = np.abs(np.sin(x[2:-2]) - sol[2:-2])
-        L1 = np.sum(error)/n
+        L1 = np.sum(error)/(n-1)
         Linf = np.max(error)
         orders_1[i] = np.log2(L1_prev/L1)
         orders_inf[i] = np.log2(Linf_prev/Linf)
