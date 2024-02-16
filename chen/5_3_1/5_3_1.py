@@ -10,6 +10,11 @@ if __name__=="__main__":
     g = njit(lambda u: u**2/(2*np.sqrt(2)))
     dfdu = njit(lambda u: u/np.sqrt(2))
     dgdu = njit(lambda u: u/np.sqrt(2))
+    # s = lambda x,y: np.sin((x+y)/np.sqrt(2))*np.cos((x+y)/np.sqrt(2))
+    # f = lambda u: u**2/(2*np.sqrt(2))
+    # g = lambda u: u**2/(2*np.sqrt(2))
+    # dfdu = lambda u: u/np.sqrt(2)
+    # dgdu = lambda u: u/np.sqrt(2)
 
     @njit
     def fp(u,a): # positive flux splitting
@@ -36,7 +41,7 @@ if __name__=="__main__":
     Linfs = np.zeros(v.shape)
     iters = np.zeros(v.shape)
 
-    N = 20*2**v + 1
+    N = 40*2**v + 1
 
     L1_prev = np.nan
     Linf_prev = np.nan

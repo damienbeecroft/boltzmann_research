@@ -1,0 +1,605 @@
+\documentclass{article}
+% Choose a conveniently small page size
+% PACKAGES
+\usepackage[margin = 1in]{geometry}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{hyperref}
+
+% MACROS
+% Set Theory
+\def\N{\mathbb{N}}
+\def\R{\mathbb{R}}
+\def\C{\mathbb{C}}
+\def\Z{\mathbb{Z}}
+%\def\^{\hat}
+\def\-{\vec}
+\def\d{\partial}
+\def\!{\boldsymbol}
+\def\X{\times}
+%\def\-{\bar}
+\def\bf{\textbf}
+\def\t{\text}
+\def\b{\mathbf}
+\def\l{\left}
+\def\r{\right}
+\title{Weekly Report}
+\author{Damien}
+\begin{document}
+\maketitle
+% \newpage
+\section{Summary}
+
+I finished reading through the derivations relevant to the numerical approximation of the Carleman form and its' numerical approximation. Furthermore, I have filled in almost all of the details that I found confusing (see the footnote towards the end). I have a good understanding of what is going on in the algorithm. I have nearly finished translating your MATLAB code into Python. Furthermore, I have a project to do for convex optimization. I am going to use this as an excuse to learn more about optimal transport and its applications to continuum mechanics. I find this area very interesting and would like to do a project on it in the future. I have attached a small section at the end concerning what I plan to do for this project in case you have any advice or aspects that I should take into consideration. 
+
+\section{Progress}
+In the following derivation we use $|\cdot|$ to symbolize the 2-norm. I would like to note that some of the following equations are taken directly from Jingwei Hu's lecture notes to expedite the computation process. I add in some of my own calculations to simplify from the general Boltzmann equation to the case od 2D Maxwell molecules that we are concerned with. Recall that the full collision operator is given by
+\begin{equation} \label{eq:collision}
+    Q(f,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[f(\b v_*') f(\b v') - f(\b v_*) f(\b v)] \t d \sigma \t d \b v_*.
+\end{equation}
+
+In the simpler case that we are working with we can simplifiy this expression to
+
+\[
+    Q(f,f)(\b v) = Q^+(f,f)(\b v) - C \rho f(\b v).
+\]
+
+I am figuring out how to appropriately compute $Q^+(f,f)$.
+\begin{gather*}
+    Q^+(f,f) = \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f(\b v') f(\b v'_*) \t d \sigma \t d \b v_*f(\b v') = \\
+    \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f \left(\frac{\b v + \b v_*}{2} + \frac{|\b v - \b v_*| }{2} \sigma \right) f \left(\frac{\b v + \b v_*}{2} - \frac{|\b v - \b v_*| }{2} \sigma \right)\t d \sigma \t d \b v_*
+\end{gather*}
+We approximate this integral through the fast Fourier spectral method based on Carleman representation.
+\subsection{General Fourier Spectral Methods}
+
+Before discussing the Carleman representation we must first talk about the general Fourier-Galerkin spectral  methods for solving the spatially homogeneous Boltzmann equation. We must first truncate the problem. We choose to do this by apprroximating the solution on a torus: $\mathcal{D}_L = [-L,L]^d$.
+
+\begin{equation} \label{eq:1}
+    \begin{cases}
+        \partial_t f = Q^R(f,f), \quad t > 0, v\in \mathcal{D}_L\\
+        f(0, \b v) = f^0(\b v)
+    \end{cases}
+\end{equation}
+
+The truncated collision operator is given by 
+
+\[
+    Q^R(g,f)(\b v) = \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) [ g(\b v'_*)f(\b v') - g(\b v-\b q)f(\b v)] \t d \sigma \t d \b q
+\]
+
+where a change of variable $\b v_* \to \b q = \b v - \b v_*$ is applied to the $\sigma$-representation of the collision operator, and the new variable $\b q$ is truncated to a ball $\mathcal{B}_R$ with radius $R$ centered at the origin. We write $\b q = |\b q|\hat{\b q}$ with $|\b q|$ being the magnitude and $\hat{\b q}$
+being the direction. Accordingly,
+
+\[
+    \b v' = \b v - \frac{\b q - |\b q| \sigma}{2}, \quad \b v'_* = \b v - \frac{\b q + |\b q| \sigma}{2}.   
+\]
+For the 2D Maxwell molecules we then have that 
+
+\[
+    Q^{R+}(f,f)(\b v) = \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f \left( \b v - \frac{\b q - |\b q| \sigma}{2} \right) f \left( \b v - \frac{\b q + |\b q| \sigma}{2} \right) \t d \sigma \t d \b q
+\]
+
+In practice, the values of L and R are often chosen by an anti-aliasing argument: assume that $\text{supp}(f_0(v)) \subset \mathcal{B}_S$, then one can take
+
+\[
+    R = 2S, \quad L \geq \frac{3 + \sqrt{2}}{2} S.
+\]
+
+ Given an integer $N \geq 0$, we then seek a truncated Fourier series expansion of $f$ as
+
+\[
+    f(t,\b v) \approx f_N(t,\b v) = \sum_{\b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b k}(t) e^{\frac{i \pi}{L} \b k \cdot \b v } \in \mathbb{P}_N
+\]
+
+where 
+
+\[
+    \mathbb{P}_N = \t{span} \left\{ e^{\frac{i \pi}{L} \b k \cdot \b v } : \b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d \right\},
+\]
+
+equipped with inner product
+
+\[
+    \langle f,g \rangle = \frac{1}{(2L)^d} \int_{\mathcal{D}_L} f \bar{g} \: d \b v\]
+
+Substituting $f_N$ into \ref{eq:1} and conducting the Galerkin projection ($\mathcal{P}_N$) onto the space $\mathbb{P}_N$ yields
+
+\begin{equation} \label{eq:2}
+    \begin{cases}
+        \partial_t f_N = \mathcal{P}_N Q^R(f_N,f_N), \quad t > 0, v\in \mathcal{D}_L\\
+        f_N(0,\b v) = \mathcal{P}_N f^0(\b v)
+    \end{cases}.
+\end{equation}
+
+$\mathcal{P}_N$ is defined as
+
+\[
+    \mathcal{P}_N [g(\b v)] = \sum_{\b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \hat{g}_k(t) e^{\frac{i \pi}{L} \b k \cdot \b v }, \quad \hat{g}_k = \langle g, e^{\frac{i \pi}{L} \b k \cdot \b v } \rangle.
+\]
+
+Writing out each Fourier mode of \ref{eq:2}, we obtain
+
+\begin{equation}
+    \begin{cases}
+        \frac{\t d}{\t d t} f_{\b k} = Q^R_{\b k}, \quad \mathbf{k} \in \{-\frac{N}{2}, \frac{N}{2}\}^d\\
+        f_{\b k}(0) = f^0_{\mathbf{k}}
+    \end{cases}
+\end{equation}
+
+with 
+
+\[
+    Q^R_{\b k} \equiv \langle Q^R(f_N, f_N), e^{\frac{i \pi}{L} \b k \cdot \b v } \rangle, \quad f^0_{\b k} \equiv \langle f^0, e^{\frac{i \pi}{L} \b k \cdot \b v} \rangle.
+\]
+
+Using the orthogonality of the Fourier basis, we can derive that
+\begin{equation} \label{eq:QR}
+    Q^R_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = k
+\end{equation}
+
+where G is given by
+
+\begin{equation} \label{eq:Glm}
+    G(\b l, \b m) = \int_{\mathcal{B}_R} \int_{S^{1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \left[ e^{-\frac{i \pi}{2L} \b (\b l + \b m) \cdot \b q + \frac{i \pi}{2L} \b (\b l - \b m) \cdot \b \sigma} - e^{-\frac{i \pi}{L} \b m \cdot \b q } \right] \t d \sigma \t d \b q
+\end{equation}
+
+Ok, let's step away from blatantly plagiarizing Jingwei's notes for a moment to actually add something. The above steps were mystifying me, so I decided to go through the calculations to verify the form of $Q^R_{\b k}$. Before that however, we need to verify the form of $Q^R(f_N,f_N)$.
+
+\begin{gather*}
+    Q^R(f_N,f_N) = \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \Bigg[ \left(\sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot \b v'_*} \right) \left(\sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot \b v'} \right) - \\
+    \left(\sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q)} \right) \left(\sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot \b v} \right) \Bigg] \t d \sigma \t d \b q = \\
+    \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \b m \cdot \b v'_* + \frac{i \pi}{L} \b l \cdot \b v'}  - e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q) + \frac{i \pi}{L} \b l \cdot \b v} \right) \t d \sigma \t d \b q = \\
+    \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \b m \cdot (\b v - \frac{\b q + |\b q| \sigma}{2}) + \frac{i \pi}{L} \b l \cdot \b (\b v - \frac{\b q - |\b q| \sigma}{2})}  - e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q) + \frac{i \pi}{L} \b l \cdot \b v} \right) \t d \sigma \t d \b q = \\ 
+    \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \left( (\b m + \b l) \cdot \b v - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  - e^{\frac{i \pi}{L} \left( (\b m + \b l) \cdot \b v - \b m \cdot \b q \right)} \right) \t d \sigma \t d \b q = \\ 
+    \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m + \b l) \cdot \b v} \left( e^{\frac{i \pi}{L} \left( - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  - e^{- \frac{i \pi}{L} \b m \cdot \b q} \right) \t d \sigma \t d \b q \\ 
+\end{gather*}
+
+After doing this computation the form of Equation \ref{eq:QR} becomes apparent. All terms where $\b l + \b m \neq \b k$ are orthogonal to $e^{\frac{i \pi}{L} \b k \cdot \b v}$ and will disappear. Now, that we understand how to derive $Q^R_{\b k}$ we can continue on to get $Q^{R+}_{\b k}$ for the algorithm relevant to us. We can see that 
+
+\[
+Q^{R+}_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G^+(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = \b k
+\]
+where 
+\[
+    G^+(\b l,\b m) = \frac{1}{2 \pi} \int_{\mathcal{B}_R} \int_{S^{1}} \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} \left( - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  \t d \sigma \t d \b q
+\]
+
+\subsection*{Fast Fourier Spectral Method Based on Carleman Representation}
+
+The memory requirement and computational complexity of the direct Fourier spectral method may become a bottleneck when $N$ is large. We restate the general form of the collision operator here because I don't want to scroll all the way back up to look at it.
+
+\[
+    Q(g,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[g(\b v_*') f(\b v') - g(\b v_*) f(\b v)] \t d \sigma \t d \b v_*.
+\]
+
+We apply the following change of variables.
+
+\[
+    \b v_* = \b v + \b x + \b y, \quad \b v' = \b v + \b x, \quad \b v'_* = \b v + \b y
+\]
+
+Plugging these into Equation \ref{eq:collision} and throwing in a $\delta(\b x \cdot \b y)$ to make sure we only consider cases where $\b v, \b v', \b v_*$, and $\b v'_*$ lie on a sphere.
+
+\begin{equation*} \label{eq:Carleman}
+    Q(g,f)(\b v) = \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)[g(\b v + \b y) f(\b v + \b x) - g(\b v + \b x + \b y) f(\b v)] \t d \b x \t d \b y.
+\end{equation*}
+
+This is the so-called Carleman form. It can be derived rather quickly by using the identity
+
+\[\frac{1}{2} \int_{S^{d-1}} F(| \b u| \sigma - \b u) \t d \sigma = \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d}\delta(2 \b x \cdot \b u + | \b x |^2) F(\b x) \t d \b x.
+\]
+
+We verify this equation briefly.
+
+\begin{gather*}
+    \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d} \delta(2 \b x \cdot \b u + | \b x |^2) F(\b x) \t d \b x = \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d} \delta((\b x + \b u)^T(\b x + \b u) - | \b u |^2) F(\b x) \t d \b x 
+\end{gather*}
+
+We make the change of variables $x = | \b u | \sigma - \b u$.
+
+\begin{gather*}
+    \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d} \delta((\b x + \b u)^T(\b x + \b u) - | \b u |^2) F(\b x) \t d \b x =
+    \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d} \delta(|\b u |^2 (\sigma ^T \sigma - 1)) F(| \b u | \sigma - \b u) | \b u | ^ d \t d \b \sigma
+\end{gather*}
+Lastly, we use the following nifty identity.
+
+\[
+    \int_{\mathbb{R}^d} \delta(g(\b x)) f(\b x) d \b x = \int_{g^{-1}(0)} \frac{f(\b x)}{| \nabla g( \b x) |} d \nu(\b x)
+\]
+
+The $\nu$ above simply indicates a change of measure. Applying this to our formula gives 
+
+\begin{gather*}
+    \frac{1}{| \b u |^{d-2}} \int_{\mathbb{R}^d} \delta(|\b u |^2 (\sigma ^T \sigma - 1)) F(| \b u | \sigma - \b u) | \b u | ^ d \t d \b \sigma = 
+    | \b u | ^ 2 \int_{S^{d-1}} \frac{F(| \b u | \sigma - \b u)}{|2 | \b u |^2 \sigma |} \t d \b \sigma = 
+    \frac{1}{2} \int_{S^{d-1}} F(| \b u | \sigma - \b u) \t d \b \sigma = 
+\end{gather*}
+
+This completes the derivation. Now we follow the the same steps as above by plugging in $f_N$. 
+\begin{gather*}
+    Q(f_N,f_N)(\b v) = \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)\Bigg[ \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v + \b y) } \right) \left( \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot (\b v + \b x) } \right)\\
+    - \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v + \b x + \b y) } \right) \left( \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b l}(t) e^{\frac{i \pi}{L}(\b l \cdot \b v ) } \right) \Bigg] \t d \b x \t d \b y = \\
+    \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)\Bigg[ \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m \cdot (\b v + \b y) + \b l \cdot (\b v + \b x)) } \right)\\
+    - \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m \cdot (\b v + \b x + \b y) + \b l \cdot \b v) } \right) \Bigg] \t d \b x \t d \b y = \\
+    \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y) \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m + \b l) \cdot \b v} \left( e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } - e^{\frac{i \pi}{L} \b m \cdot (\b x + \b y) }\right) \t d \b x \t d \b y = 
+\end{gather*}
+
+From here on we will take $B_c(\b x, \b y) = \frac{1}{2 \pi}$. Using the orthogonality of the Fourier basis, we can derive that
+
+\begin{equation} \label{eq:QR_carl}
+    Q^R_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = \b k
+\end{equation}
+
+where G is given by
+
+\begin{equation} \label{eq:Glm_carl}
+    G(\b l, \b m) = \int_{\mathcal{B}_R} \int_{\mathcal{B}_R} \delta(\b x \cdot \b y) \left[  e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } - e^{\frac{i \pi}{L} \b m \cdot (\b x + \b y)} \right] \t d \b x \t d \b y.
+\end{equation}
+
+The idea of the fast algorithm is to find a separated expansion of the weight $G(\b l, \b m)$ (in fact, we only need to do this for the gain term because the loss term is readily a convolution) as
+
+\[
+    G^+(\b l, \b m) \approx \sum_{t = 1}^T \alpha_t(\b l) \beta_t(\b m),
+\]
+
+where T is small, so that the weighted convolution Equation \ref{eq:QR_carl} can be rendered into a few pure convolutions
+
+\[
+    Q_{\b k}^R+ \approx \sum_{t=1}^T \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} (\alpha_t(\b l) f_{\b l})(\beta_t(\b m) f_{\b m})  \quad \text{subject to} \quad \b l + \b m = \b k
+\]
+
+To achieve this goal, we simplify the gain term of Equation \ref{eq:Glm_carl}.
+
+\begin{gather*}
+    G^+(\b l, \b m) = \int_{\mathcal{B}_R} \int_{\mathcal{B}_R} \delta(\b x \cdot \b y) e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } \t d \b x \t d \b y = \\
+    \int_{S^{d-1}} \int_{S^{d-1}} \int_0^R \int_0^R \delta(\hat{\b x} \cdot \hat{\b y}) e^{\frac{i \pi}{L} (|\b y| \b m \cdot \hat{\b y} + |\b x| \b l \cdot \hat{\b x})} |\b x|^{d-2} |\b y|^{d-2} \t d |\b x| \t d |\b y| \t d \hat{\b x} \t d \hat{\b y} = \\
+    \int_{S^{d-1}} \int_{S^{d-1}} \delta(\hat{\b x} \cdot \hat{\b y}) \left( \int_0^R e^{\frac{i \pi}{L} |\b x| \b l \cdot \hat{\b x}} |\b x|^{d-2} \t d |\b x| \right) \left( \int_0^R  e^{|\b y| \b m \cdot \hat{\b y}} |\b y|^{d-2}  \t d |\b y| \right) \t d \hat{\b x} \t d \hat{\b y} = \\
+    \int_{S^{d-1}} \int_{S^{d-1}} \delta(\hat{\b x} \cdot \hat{\b y}) \alpha( \b l \cdot \hat{\b x}) \alpha( \b m \cdot \hat{\b y}) \t d \hat{\b x} \t d \hat{\b y}
+\end{gather*}
+
+where 
+
+\[
+    \alpha(s) := \int_0^R e^{i \frac{\pi}{L} \rho s} \rho^{d-2} \t d \rho.
+\]
+
+In particular, in 2D, we can write (3D can be done similarly):
+
+\[
+    G^+(\b l, \b m) = 2 \int_{S^1} \alpha( \b l \cdot \sigma) \alpha \left( \sqrt{|\b m|^2 - (\b m \cdot \sigma)^2} \right) \t d \sigma,
+\]
+
+that is, the final integration is reduced to a circle (sphere) only. \footnote{\textcolor{red}{I don't understand where $\sqrt{|\b m|^2 - (\b m \cdot \sigma)^2}$ comes from.}} Now if we approximate
+the final integral by a quadrature rather than precompute it, $G^+(\b l, \b m)$ would be a
+separated expansion of $\b l$ and $\b m$:
+
+\[
+    G^+(\b l, \b m) \approx 2 \sum_{\sigma \in S^1} w_{\sigma} \alpha( \b l \cdot \sigma) \alpha \left( \sqrt{|\b m|^2 - (\b m \cdot \sigma)^2} \right),
+\]
+
+where $w_\sigma$ is the weight of the quadrature.
+
+\subsection{Convex Optimization Project}
+
+I am currently planning to implement the algorithms discussed in \textit{A computational fluid mechanics solution to the Monge-Kantorovich mass transfer problem} by Benamou and Brenier \cite{BenamouB00}. I currently have no background in optimal transport, so I will be using \textit{Optimal Transport for Applied Mathematicians. Calculus of Variations, PDEs and Modeling} by Santambragio \cite{noauthororeditor} as my main source of information.
+
+\section{To Do}
+
+I need to finish up the coding.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The code below uses \| instead of | in some of the equations. This is the only difference.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \documentclass{article}
+% % Choose a conveniently small page size
+% % PACKAGES
+% \usepackage[margin = 1in]{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{multicol}
+% \usepackage{graphicx}
+% \usepackage{float}
+% \usepackage{xcolor}
+% \usepackage{amsthm}
+% \usepackage{dsfont}
+% \usepackage{hyperref}
+
+% % MACROS
+% % Set Theory
+% \def\N{\mathbb{N}}
+% \def\R{\mathbb{R}}
+% \def\C{\mathbb{C}}
+% \def\Z{\mathbb{Z}}
+% %\def\^{\hat}
+% \def\-{\vec}
+% \def\d{\partial}
+% \def\!{\boldsymbol}
+% \def\X{\times}
+% %\def\-{\bar}
+% \def\bf{\textbf}
+% \def\t{\text}
+% \def\b{\mathbf}
+% \def\l{\left}
+% \def\r{\right}
+% \title{Weekly Report}
+% \author{Damien}
+% \begin{document}
+% \maketitle
+% % \newpage
+% \section{Summary}
+
+% I finished reading through the derivations relevant to the numerical approximation of the Carleman form and its' numerical approximation. Furthermore, I have filled in almost all of the details that I found confusing (see the footnote towards the end). I have a good understanding of what is going on. I am now going through the code you sent me and working on implementing the normal shock problem. 
+
+% \section{Progress}
+% I would like to note that some of the following equations are taken directly from Jingwei Hu's lecture notes to expedite the computation process. I add in some of my own calculations to simplify from the general Boltzmann equation to the case od 2D Maxwell molecules that we are concerned with. Recall that the full collision operator is given by
+% \begin{equation} \label{eq:collision}
+%     Q(f,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[f(\b v_*') f(\b v') - f(\b v_*) f(\b v)] \t d \sigma \t d \b v_*.
+% \end{equation}
+
+% In the simpler case that we are working with we can simplifiy this expression to
+
+% \[
+%     Q(f,f)(\b v) = Q^+(f,f)(\b v) - C \rho f(\b v).
+% \]
+
+% I am figuring out how to appropriately compute $Q^+(f,f)$.
+% \begin{gather*}
+%     Q^+(f,f) = \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f(\b v') f(\b v'_*) \t d \sigma \t d \b v_*f(\b v') = \\
+%     \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f \left(\frac{\b v + \b v_*}{2} + \frac{\|\b v - \b v_*\| }{2} \sigma \right) f \left(\frac{\b v + \b v_*}{2} - \frac{\|\b v - \b v_*\| }{2} \sigma \right)\t d \sigma \t d \b v_*
+% \end{gather*}
+% We approximate this integral through the fast Fourier spectral method based on Carleman representation.
+% \subsection{General Fourier Spectral Methods}
+
+% Before discussing the Carleman representation we must first talk about the general Fourier-Galerkin spectral  methods for solving the spatially homogeneous Boltzmann equation. We must first truncate the problem. We choose to do this by apprroximating the solution on a torus: $\mathcal{D}_L = [-L,L]^d$.
+
+% \begin{equation} \label{eq:1}
+%     \begin{cases}
+%         \partial_t f = Q^R(f,f), \quad t > 0, v\in \mathcal{D}_L\\
+%         f(0, \b v) = f^0(\b v)
+%     \end{cases}
+% \end{equation}
+
+% The truncated collision operator is given by 
+
+% \[
+%     Q^R(g,f)(\b v) = \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) [ g(\b v'_*)f(\b v') - g(\b v-\b q)f(\b v)] \t d \sigma \t d \b q
+% \]
+
+% where a change of variable $\b v_* \to \b q = \b v - \b v_*$ is applied to the $\sigma$-representation of the collision operator, and the new variable $\b q$ is truncated to a ball $\mathcal{B}_R$ with radius $R$ centered at the origin. We write $\b q = |\b q|\hat{\b q}$ with $|\b q|$ being the magnitude and $\hat{\b q}$
+% being the direction. Accordingly,
+
+% \[
+%     \b v' = \b v - \frac{\b q - |\b q| \sigma}{2}, \quad \b v'_* = \b v - \frac{\b q + |\b q| \sigma}{2}.   
+% \]
+% For the 2D Maxwell molecules we then have that 
+
+% \[
+%     Q^{R+}(f,f)(\b v) = \frac{1}{2 \pi} \int_{\mathbb{R}^2} \int_{S^1} f \left( \b v - \frac{\b q - |\b q| \sigma}{2} \right) f \left( \b v - \frac{\b q + |\b q| \sigma}{2} \right) \t d \sigma \t d \b q
+% \]
+
+% In practice, the values of L and R are often chosen by an anti-aliasing argument: assume that $\text{supp}(f_0(v)) \subset \mathcal{B}_S$, then one can take
+
+% \[
+%     R = 2S, \quad L \geq \frac{3 + \sqrt{2}}{2} S.
+% \]
+
+%  Given an integer $N \geq 0$, we then seek a truncated Fourier series expansion of $f$ as
+
+% \[
+%     f(t,\b v) \approx f_N(t,\b v) = \sum_{\b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b k}(t) e^{\frac{i \pi}{L} \b k \cdot \b v } \in \mathbb{P}_N
+% \]
+
+% where 
+
+% \[
+%     \mathbb{P}_N = \t{span} \left\{ e^{\frac{i \pi}{L} \b k \cdot \b v } : \b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d \right\},
+% \]
+
+% equipped with inner product
+
+% \[
+%     \langle f,g \rangle = \frac{1}{(2L)^d} \int_{\mathcal{D}_L} f \bar{g} \: d \b v\]
+
+% Substituting $f_N$ into \ref{eq:1} and conducting the Galerkin projection ($\mathcal{P}_N$) onto the space $\mathbb{P}_N$ yields
+
+% \begin{equation} \label{eq:2}
+%     \begin{cases}
+%         \partial_t f_N = \mathcal{P}_N Q^R(f_N,f_N), \quad t > 0, v\in \mathcal{D}_L\\
+%         f_N(0,\b v) = \mathcal{P}_N f^0(\b v)
+%     \end{cases}.
+% \end{equation}
+
+% $\mathcal{P}_N$ is defined as
+
+% \[
+%     \mathcal{P}_N [g(\b v)] = \sum_{\b k \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \hat{g}_k(t) e^{\frac{i \pi}{L} \b k \cdot \b v }, \quad \hat{g}_k = \langle g, e^{\frac{i \pi}{L} \b k \cdot \b v } \rangle.
+% \]
+
+% Writing out each Fourier mode of \ref{eq:2}, we obtain
+
+% \begin{equation}
+%     \begin{cases}
+%         \frac{\t d}{\t d t} f_{\b k} = Q^R_{\b k}, \quad \mathbf{k} \in \{-\frac{N}{2}, \frac{N}{2}\}^d\\
+%         f_{\b k}(0) = f^0_{\mathbf{k}}
+%     \end{cases}
+% \end{equation}
+
+% with 
+
+% \[
+%     Q^R_{\b k} \equiv \langle Q^R(f_N, f_N), e^{\frac{i \pi}{L} \b k \cdot \b v } \rangle, \quad f^0_{\b k} \equiv \langle f^0, e^{\frac{i \pi}{L} \b k \cdot \b v} \rangle.
+% \]
+
+% Using the orthogonality of the Fourier basis, we can derive that
+% \begin{equation} \label{eq:QR}
+%     Q^R_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = k
+% \end{equation}
+
+% where G is given by
+
+% \begin{equation} \label{eq:Glm}
+%     G(\b l, \b m) = \int_{\mathcal{B}_R} \int_{S^{1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \left[ e^{-\frac{i \pi}{2L} \b (\b l + \b m) \cdot \b q + \frac{i \pi}{2L} \b (\b l - \b m) \cdot \b \sigma} - e^{-\frac{i \pi}{L} \b m \cdot \b q } \right] \t d \sigma \t d \b q
+% \end{equation}
+
+% Ok, let's step away from blatantly plagiarizing Jingwei's notes for a moment to actually add something. The above steps were mystifying me, so I decided to go through the calculations to verify the form of $Q^R_{\b k}$. Before that however, we need to verify the form of $Q^R(f_N,f_N)$.
+
+% \begin{gather*}
+%     Q^R(f_N,f_N) = \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \Bigg[ \left(\sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot \b v'_*} \right) \left(\sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot \b v'} \right) - \\
+%     \left(\sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q)} \right) \left(\sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot \b v} \right) \Bigg] \t d \sigma \t d \b q = \\
+%     \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \b m \cdot \b v'_* + \frac{i \pi}{L} \b l \cdot \b v'}  - e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q) + \frac{i \pi}{L} \b l \cdot \b v} \right) \t d \sigma \t d \b q = \\
+%     \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \b m \cdot (\b v - \frac{\b q + |\b q| \sigma}{2}) + \frac{i \pi}{L} \b l \cdot \b (\b v - \frac{\b q - |\b q| \sigma}{2})}  - e^{\frac{i \pi}{L} \b m \cdot (\b v - \b q) + \frac{i \pi}{L} \b l \cdot \b v} \right) \t d \sigma \t d \b q = \\ 
+%     \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) \left( e^{\frac{i \pi}{L} \left( (\b m + \b l) \cdot \b v - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  - e^{\frac{i \pi}{L} \left( (\b m + \b l) \cdot \b v - \b m \cdot \b q \right)} \right) \t d \sigma \t d \b q = \\ 
+%     \int_{\mathcal{B}_R} \int_{S^{d-1}} B_{\sigma}(|\b q|, \sigma \cdot \hat{\b q}) \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m + \b l) \cdot \b v} \left( e^{\frac{i \pi}{L} \left( - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  - e^{- \frac{i \pi}{L} \b m \cdot \b q} \right) \t d \sigma \t d \b q \\ 
+% \end{gather*}
+
+% After doing this computation the form of Equation \ref{eq:QR} becomes apparent. All terms where $\b l + \b m \neq \b k$ are orthogonal to $e^{\frac{i \pi}{L} \b k \cdot \b v}$ and will disappear. Now, that we understand how to derive $Q^R_{\b k}$ we can continue on to get $Q^{R+}_{\b k}$ for the algorithm relevant to us. We can see that 
+
+% \[
+% Q^{R+}_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G^+(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = \b k
+% \]
+% where 
+% \[
+%     G^+(\b l,\b m) = \frac{1}{2 \pi} \int_{\mathcal{B}_R} \int_{S^{1}} \sum_{\b m \in \{\frac{N}{2}, \frac{N}{2} \}^d} \sum_{\b l \in \{\frac{N}{2}, \frac{N}{2} \}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} \left( - (\b m + \b l) \cdot \b q + (\b l - \b m) \cdot \frac{|\b q| \sigma}{2} ) \right)}  \t d \sigma \t d \b q
+% \]
+
+% \subsection*{Fast Fourier Spectral Method Based on Carleman Representation}
+
+% The memory requirement and computational complexity of the direct Fourier spectral method may become a bottleneck when $N$ is large. We restate the general form of the collision operator here because I don't want to scroll all the way back up to look at it.
+
+% \[
+%     Q(g,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[g(\b v_*') f(\b v') - g(\b v_*) f(\b v)] \t d \sigma \t d \b v_*.
+% \]
+
+% We apply the following change of variables.
+
+% \[
+%     \b v_* = \b v + \b x + \b y, \quad \b v' = \b v + \b x, \quad \b v'_* = \b v + \b y
+% \]
+
+% Plugging these into Equation \ref{eq:collision} and throwing in a $\delta(\b x \cdot \b y)$ to make sure we only consider cases where $\b v, \b v', \b v_*$, and $\b v'_*$ lie on a sphere.
+
+% \begin{equation*} \label{eq:Carleman}
+%     Q(g,f)(\b v) = \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)[g(\b v + \b y) f(\b v + \b x) - g(\b v + \b x + \b y) f(\b v)] \t d \b x \t d \b y.
+% \end{equation*}
+
+% This is the so-called Carleman form. It can be derived rather quickly by using the identity
+
+% \[\frac{1}{2} \int_{S^{d-1}} F(\| \b u\| \sigma - \b u) \t d \sigma = \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d}\delta(2 \b x \cdot \b u + \| \b x \|^2) F(\b x) \t d \b x.
+% \]
+
+% We verify this equation briefly.
+
+% \begin{gather*}
+%     \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d} \delta(2 \b x \cdot \b u + \| \b x \|^2) F(\b x) \t d \b x = \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d} \delta((\b x + \b u)^T(\b x + \b u) - \| \b u \|^2) F(\b x) \t d \b x 
+% \end{gather*}
+
+% We make the change of variables $x = \| \b u \| \sigma - \b u$.
+
+% \begin{gather*}
+%     \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d} \delta((\b x + \b u)^T(\b x + \b u) - \| \b u \|^2) F(\b x) \t d \b x =
+%     \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d} \delta(\|\b u \|^2 (\sigma ^T \sigma - 1)) F(\| \b u \| \sigma - \b u) \| \b u \| ^ d \t d \b \sigma
+% \end{gather*}
+% Lastly, we use the following nifty identity.
+
+% \[
+%     \int_{\mathbb{R}^d} \delta(g(\b x)) f(\b x) d \b x = \int_{g^{-1}(0)} \frac{f(\b x)}{\| \nabla g( \b x) \|} d \nu(\b x)
+% \]
+
+% The $\nu$ above simply indicates a change of measure. Applying this to our formula gives 
+
+% \begin{gather*}
+%     \frac{1}{\| \b u \|^{d-2}} \int_{\mathbb{R}^d} \delta(\|\b u \|^2 (\sigma ^T \sigma - 1)) F(\| \b u \| \sigma - \b u) \| \b u \| ^ d \t d \b \sigma = 
+%     \| \b u \| ^ 2 \int_{S^{d-1}} \frac{F(\| \b u \| \sigma - \b u)}{\|2 \| \b u \|^2 \sigma \|} \t d \b \sigma = 
+%     \frac{1}{2} \int_{S^{d-1}} F(\| \b u \| \sigma - \b u) \t d \b \sigma = 
+% \end{gather*}
+
+% This completes the derivation. Now we follow the the same steps as above by plugging in $f_N$. 
+% \begin{gather*}
+%     Q(f_N,f_N)(\b v) = \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)\Bigg[ \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v + \b y) } \right) \left( \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b l}(t) e^{\frac{i \pi}{L} \b l \cdot (\b v + \b x) } \right)\\
+%     - \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) e^{\frac{i \pi}{L} \b m \cdot (\b v + \b x + \b y) } \right) \left( \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b l}(t) e^{\frac{i \pi}{L}(\b l \cdot \b v ) } \right) \Bigg] \t d \b x \t d \b y = \\
+%     \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)\Bigg[ \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m \cdot (\b v + \b y) + \b l \cdot (\b v + \b x)) } \right)\\
+%     - \left( \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m \cdot (\b v + \b x + \b y) + \b l \cdot \b v) } \right) \Bigg] \t d \b x \t d \b y = \\
+%     \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y) \sum_{\b m \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} \sum_{\b l \in \left\{-\frac{N}{2}, \frac{N}{2}\right\}^d} f_{\b m}(t) f_{\b l}(t) e^{\frac{i \pi}{L} (\b m + \b l) \cdot \b v} \left( e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } - e^{\frac{i \pi}{L} \b m \cdot (\b x + \b y) }\right) \t d \b x \t d \b y = 
+% \end{gather*}
+
+% From here on we will take $B_c(\b x, \b y) = \frac{1}{2 \pi}$. Using the orthogonality of the Fourier basis, we can derive that
+
+% \begin{equation} \label{eq:QR_carl}
+%     Q^R_{\b k} = \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} G(\b l,\b m) f_{\b l} f_{\b m} \quad \text{subject to} \quad \b l + \b m = \b k
+% \end{equation}
+
+% where G is given by
+
+% \begin{equation} \label{eq:Glm_carl}
+%     G(\b l, \b m) = \int_{\mathcal{B}_R} \int_{\mathcal{B}_R} \delta(\b x \cdot \b y) \left[  e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } - e^{\frac{i \pi}{L} \b m \cdot (\b x + \b y)} \right] \t d \b x \t d \b y.
+% \end{equation}
+
+% The idea of the fast algorithm is to find a separated expansion of the weight $G(\b l, \b m)$ (in fact, we only need to do this for the gain term because the loss term is readily a convolution) as
+
+% \[
+%     G^+(\b l, \b m) \approx \sum_{t = 1}^T \alpha_t(\b l) \beta_t(\b m),
+% \]
+
+% where T is small, so that the weighted convolution Equation \ref{eq:QR_carl} can be rendered into a few pure convolutions
+
+% \[
+%     Q_{\b k}^R+ \approx \sum_{t=1}^T \sum_{\b l,\b m \in \{-\frac{N}{2}, \frac{N}{2}\}^d} (\alpha_t(\b l) f_{\b l})(\beta_t(\b m) f_{\b m})  \quad \text{subject to} \quad \b l + \b m = \b k
+% \]
+
+% To achieve this goal, we simplify the gain term of Equation \ref{eq:Glm_carl}.
+
+% \begin{gather*}
+%     G^+(\b l, \b m) = \int_{\mathcal{B}_R} \int_{\mathcal{B}_R} \delta(\b x \cdot \b y) e^{\frac{i \pi}{L} (\b m \cdot \b y + \b l \cdot \b x) } \t d \b x \t d \b y = \\
+%     \int_{S^{d-1}} \int_{S^{d-1}} \int_0^R \int_0^R \delta(\hat{\b x} \cdot \hat{\b y}) e^{\frac{i \pi}{L} (|\b y| \b m \cdot \hat{\b y} + |\b x| \b l \cdot \hat{\b x})} |\b x|^{d-2} |\b y|^{d-2} \t d |\b x| \t d |\b y| \t d \hat{\b x} \t d \hat{\b y} = \\
+%     \int_{S^{d-1}} \int_{S^{d-1}} \delta(\hat{\b x} \cdot \hat{\b y}) \left( \int_0^R e^{\frac{i \pi}{L} |\b x| \b l \cdot \hat{\b x}} |\b x|^{d-2} \t d |\b x| \right) \left( \int_0^R  e^{|\b y| \b m \cdot \hat{\b y}} |\b y|^{d-2}  \t d |\b y| \right) \t d \hat{\b x} \t d \hat{\b y} = \\
+%     \int_{S^{d-1}} \int_{S^{d-1}} \delta(\hat{\b x} \cdot \hat{\b y}) \alpha( \b l \cdot \hat{\b x}) \alpha( \b m \cdot \hat{\b y}) \t d \hat{\b x} \t d \hat{\b y}
+% \end{gather*}
+
+% where 
+
+% \[
+%     \alpha(s) := \int_0^R e^{i \frac{\pi}{L} \rho s} \rho^{d-2} \t d \rho.
+% \]
+
+% In particular, in 2D, we can write (3D can be done similarly):
+
+% \[
+%     G^+(\b l, \b m) = 2 \int_{S^1} \alpha( \b l \cdot \sigma) \alpha \left( \sqrt{|\b m|^2 - (\b m \cdot \sigma)^2} \right) \t d \sigma,
+% \]
+
+% that is, the final integration is reduced to a circle (sphere) only. \footnote{\textcolor{red}{I don't understand where $\sqrt{|\b m|^2 - (\b m \cdot \sigma)^2}$ comes from.}} Now if we approximate
+% the final integral by a quadrature rather than precompute it, $G^+(\b l, \b m)$ would be a
+% separated expansion of $\b l$ and $\b m$:
+
+% \[
+%     G^+(\b l, \b m) \approx 2 \sum_{\sigma \in S^1} w_{\sigma} \alpha( \b l \cdot \sigma) \alpha \left( \sqrt{|\b m|^2 - (\b m \cdot \sigma)^2} \right),
+% \]
+
+% where $w_\sigma$ is the weight of the quadrature.
+
+
+% % |\b y| \b m \cdot \hat{\b y} + 
+% % Ok, let's slow down and derive some things. Specifically, let's look back and derive the Carleman formulation in Equation \ref{eq:Carleman} from the normal Boltzmann equation \ref{eq:collision}. In other words we need to show 
+% % \begin{gather*}
+% %     \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[g(\b v_*') f(\b v') - g(\b v_*) f(\b v)] \t d \sigma \t d \b v_* = \\
+% %      \int_{\mathbb{R}^d} \int_{\mathbb{R}^d} B_c(\b x, \b y) \delta( \b x \cdot \b y)[g(\b v + \b y) f(\b v + \b x) - g(\b v + \b x + \b y) f(\b v)] \t d \b x \t d \b y.
+% % \end{gather*}
+
+% \section{To Do}
+
+% \bibliographystyle{plain}
+% \bibliography{refs}
+% \end{document}

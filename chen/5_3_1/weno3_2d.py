@@ -123,25 +123,34 @@ def sweep(fp,fm,dfdu,gp,gm,dgdu,s,u,x,y,dx,dy,n,m,ax,ay):
     u,ax,ay = sweep_helper(fp,fm,dfdu,gp,gm,dgdu,s,u,x,y,dx,dy,ax,ay,np.flip(I),np.flip(J),d0,d1,eps)
     return u,ax,ay
 
-@njit
+# @njit
 def weno3(fp,fm,dfdu,gp,gm,dgdu,s,x,y,u,dx,dy):
     n = x.size
     m = y.size
+    coords =  np.array([[[x_,y_] for x_ in x] for y_ in y])
 
     ax = np.max(np.abs(dfdu(u[2:-2,2:-2])))
     ay = np.max(np.abs(dgdu(u[2:-2,2:-2])))
 
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # true = np.sin((coords[2:-2,2:-2,0] + coords[2:-2,2:-2,1])/np.sqrt(2))
+    # ax.plot_surface(coords[2:-2,2:-2,0], coords[2:-2,2:-2,1], u[2:-2,2:-2], label='Approximation')
+    # ax.plot_surface(coords[2:-2,2:-2,0], coords[2:-2,2:-2,1], true, label='True Solution')
+    # plt.show()
+    # plt.close()
+
+    iter = 0
     u0 = u
 
     u1 = np.copy(u0)
     u1,ax,ay = sweep(fp,fm,dfdu,gp,gm,dgdu,s,u1,x,y,dx,dy,n,m,ax,ay) 
-
+    iter +=1
     u2 = np.copy(u1)
     u2,ax,ay = sweep(fp,fm,dfdu,gp,gm,dgdu,s,u2,x,y,dx,dy,n,m,ax,ay) 
-
+    iter +=1
     q1 = (np.linalg.norm(u2 - u1) + dx**3)/np.linalg.norm(u1 - u0)
     q2 = np.linalg.norm(u2 - u1) - dx**4
-    iter = 0
     while((q1 < 1) or (q2 > 0)):
         u0 = np.copy(u1)
         u1 = np.copy(u2)
@@ -149,6 +158,14 @@ def weno3(fp,fm,dfdu,gp,gm,dgdu,s,x,y,u,dx,dy):
         q1 = (np.linalg.norm(u2 - u1) + dx**3)/np.linalg.norm(u1 - u0)
         q2 = np.linalg.norm(u2 - u1) - dx**4
         iter += 1
+        if iter % 100 == 0:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            true = np.sin((coords[2:-2,2:-2,0] + coords[2:-2,2:-2,1])/np.sqrt(2))
+            ax.plot_surface(coords[2:-2,2:-2,0], coords[2:-2,2:-2,1], u2[2:-2,2:-2], label='Approximation')
+            ax.plot_surface(coords[2:-2,2:-2,0], coords[2:-2,2:-2,1], true, label='True Solution')
+            plt.show()
+            plt.close()
     print(iter)
     return iter, u2
 

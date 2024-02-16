@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 21.12) (preloaded format=pdflatex 2022.2.12)  10 NOV 2023 11:22
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 21.12) (preloaded format=pdflatex 2022.2.12)  12 FEB 2024 12:06
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -436,20 +436,20 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 
 {C:/Users/damie/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] (template.aux)
 Package rerunfilecheck Info: File `template.out' has not changed.
-(rerunfilecheck)             Checksum: 6B7694CEAE370514FFA7FB1A5DBF6A0D;154.
+(rerunfilecheck)             Checksum: 8E1C6F90C64F43107E6A10E07AE1F0A9;232.
  ) 
 Here is how much of TeX's memory you used:
- 10577 strings out of 478659
- 164709 string characters out of 2845920
- 466644 words of memory out of 3000000
- 28539 multiletter control sequences out of 15000+600000
+ 10579 strings out of 478659
+ 164729 string characters out of 2845920
+ 466642 words of memory out of 3000000
+ 28540 multiletter control sequences out of 15000+600000
  408979 words of font info for 48 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  60i,6n,63p,285b,327s stack positions out of 5000i,500n,10000p,200000b,80000s
 <C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb>
-Output written on template.pdf (1 page, 42972 bytes).
+Output written on template.pdf (1 page, 44349 bytes).
 PDF statistics:
- 40 PDF objects out of 1000 (max. 8388607)
- 4 named destinations out of 1000 (max. 500000)
- 17 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 44 PDF objects out of 1000 (max. 8388607)
+ 5 named destinations out of 1000 (max. 500000)
+ 25 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -1,0 +1,108 @@
+\documentclass{article}
+% Choose a conveniently small page size
+% PACKAGES
+\usepackage[margin = 1in]{geometry}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{hyperref}
+
+% MACROS
+% Set Theory
+\def\N{\mathbb{N}}
+\def\R{\mathbb{R}}
+\def\C{\mathbb{C}}
+\def\Z{\mathbb{Z}}
+%\def\^{\hat}
+\def\-{\vec}
+\def\d{\partial}
+\def\!{\boldsymbol}
+\def\X{\times}
+%\def\-{\bar}
+\def\t{\text}
+\def\b{\textbf}
+\def\l{\left}
+\def\r{\right}
+\title{Weekly Report}
+\author{Damien}
+\begin{document}
+\maketitle
+\section{Tasks}
+This week I was tasked with solving the steady state Boltzmann equation
+\[
+    \b{v} \cdot \nabla_{\b{x}}f = \mathcal{Q}(f,f)
+\]
+where
+\[
+    \mathcal{Q}(f,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} B(|\b v - \b v_*|,\cos \chi)[f(\b v_*') f(\b v') - f(\b v_*) f(\b v)] \t d \sigma \t d \b v_*.
+\]
+and
+\[
+    \b v' = \frac{\b v + \b v_*}{2} + \frac{|\b v - \b v_*|}{2} \mathbf{\sigma}, \quad
+    \b v_*' = \frac{\b v + \b v_*}{2} - \frac{|\b v - \b v_*|}{2} \mathbf{\sigma}
+\]
+In particular, we want to replicate the results from from Section 5.2 in Hu et al. \cite{hu2021adaptive}. In this problem we are modeling 2D Maxwell molecules. We therefore have that $B(|\b v - \b v_*|,\cos \chi) = 1/2 \pi$ for all velocities and angles. 
+\section{Progress}
+\subsection{Reading}
+I spent a good deal of time this week parsing \href{https://gyu-eun-lee.github.io/academic/gso_boltzmann.pdf}{these notes} by Gyu Eun Lee. They provide the most intuitive explanation of the Boltzmann that I have seen. I understand the Boltzmann equation much better now.
+\subsection{Simplification of Boltzmann Equation for 2D Maxwell Molecules}
+Since the collision kernel is constant we can simplify the above integral. Note that both $f$ and $\rho$ (this will be defined later) are functions of $\b x$ but we drop this dependence for convenience of notation.
+\begin{align*}
+    \mathcal{Q}(f,f)(\b v) = \int_{\mathbb{R}^d} \int_{S^{d-1}} \frac{1}{2\pi}[f(\b v_*') f(\b v') - f(\b v_*) f(\b v)] \t d \sigma \t d \b v_* =\\
+    \int_{\mathbb{R}^d} \int_{S^{d-1}} \frac{1}{2\pi}f(\b v_*') f(\b v') \t d \sigma \t d \b v_* - \int_{\mathbb{R}^d} \int_{S^{d-1}} \frac{1}{2\pi} f(\b v_*) f(\b v) \t d \sigma \t d \b v_* = \\
+    \mathcal{Q}^+(f,f)(\b v) - \frac{1}{2\pi} f(\b v) \int_{\mathbb{R}^d} \int_{S^{d-1}}  f(\b v_*) \t d \sigma \t d \b v_* =\\
+    \mathcal{Q}^+(f,f)(\b v) - \frac{1}{2\pi} f(\b v) \int_{\mathbb{R}^d} 2 \pi f(\b v_*) \t d \b v_* =\\
+    \mathcal{Q}^+(f,f)(\b v) - C \rho f(\b v)
+\end{align*}
+The constant $C$ comes from rescaling that is done in the derivation of the Boltzmann equation. This can be observed in \href{https://gyu-eun-lee.github.io/academic/gso_boltzmann.pdf}{this article}. The $\rho$ comes from the fact that we are integrating out velocity from the phase space probability function $f$ which leaves us with only the spatial density, $\rho$.
+\subsection{Normal Shock Problem}
+We will tackle the normal shock problem as stated in section 5.2 of Hu et al. \cite{hu2021adaptive}. We take $R=1$, $d=2$, hence $\gamma=2$, $M_L=u_L / \sqrt{2T_L}$. In the following, the spatial domain is chosen as $x_1 \in [-30,,30]$ with $N_{\b x} = 1000$; and the velocity domain is $(v_1,v_2) \in [-L_{\b v},L_{\b v}]^2$.
+
+We choose the upstream and downstream conditions as
+\[
+    (\rho_L,\rho_R) = \left( 1, \frac{3M_L^2}{M_L^2 + 2}\right), \quad
+    (u_L, u_R) = \left(\sqrt{2} M_L, \frac{\rho_L u_L}{\rho_R}\right), \quad
+    (T_L, T_R) = \left(1, \frac{4M_L^2 - 1}{\rho_R} \right)
+\]
+and the downstream conditions as
+\[
+    \rho_0(x_1) = \frac{\tanh(\alpha x_1) + 1}{2(\rho_R - \rho_L)} + \rho_L, \quad
+    T_0(x_1) = \frac{\tanh(\alpha x_1) + 1}{2(T_R - T_L)} + T_L, \quad
+    \b u_0(x_1) = \left(\frac{\tanh(\alpha x_1) + 1}{2(u_R - u_L)}, 0 \right), \quad
+\]
+with $\alpha = 0.5$.
+
+When showing the numerical results, we are mainly interested in the macroscopic quantities: density $\rho(x_1)$, bulk  velocity $u(x_1)$ ,and temperature $T(x_1)$. Their normalized calues will be plotted, which are defined by
+\[
+    \hat \rho(x_1) = \frac{\rho(x_1) - \rho_L}{\rho_R - \rho_L}, \quad
+    \hat u(x_1) = \frac{u(x_1) - u_L}{u_R - u_L}, \quad
+    \hat T(x_1) = \frac{T(x_1) - T_L}{T_R - T_L}.
+\]
+In Hu et al. \cite{hu2021adaptive} there is an example of a strong as well as a weak shock. We will model both of these.
+\subsection{Numerical Scheme for the Normal Shock Problem}
+For our numerical scheme we will be applying the methods developed in Chen et al. \cite{CHEN2013452} and applying them to the equation described above. For the left-to-right sweep the numerical discretization is 
+\[
+    \frac{v + |v|}{2} \frac{f_i^{(l+1)} - f_{i-1}^{(l+1)}}{\Delta x} + \frac{v - |v|}{2} \frac{f_{i+1}^{(l)} - f_i^{(l+1)}}{\Delta x} = Q^+(f^{(l)}, f^{(l)}) - C \rho_i^{(l)} f_i^{(l+1)}
+\]
+and for the right-to-left sweep the numerical discretization is
+\[
+    \frac{v + |v|}{2} \frac{f_i^{(l+1)} - f_{i-1}^{(l)}}{\Delta x} + \frac{v - |v|}{2} \frac{f_{i+1}^{(l+1)} - f_i^{(l+1)}}{\Delta x} = Q^+(f^{(l)}, f^{(l)}) - C \rho_i^{(l)} f_i^{(l+1)}.
+\]
+The update rule is acquired by isolating $f_i^{(l+1)}$ on one side. For $Q^+(f^{(l)}, f^{(l)})$ we must integrate over the whole velocity domain as well as a sphere. For $\rho_i^{(l)}$ we must integrate only over the whole velocity domain. We can only use the data from the previous time step in these integral computations otherwise we do not know what we are integrating. The derivative discretization of this scheme is only first order so it would not make much sense to use a very high-order integration. I intend to use the trapezoidal method for the first attempt.
+\section{To Do}
+This coming week I will begin implementing the numerical methods to replicate the results in section 5.2 in Hu et al. \cite{hu2021adaptive} using the methods developed in Chen et al. \cite{CHEN2013452}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+
+% I began the week with a careful reading of Hu et al. \cite{hu2021adaptive}. I also  The general idea is to take your equation and project it onto a basis acquired by performing a singular value decomposition. Then, to simplify the numerics, the left singular vectors, singular values, and right singular vectors are progressed intermittently. These are called the K, S and L steps. The rank of the problem also changes during the evolution of the solution. In-flow boundary conditions introduce information throughout the evolution of the system which increases the basis. Therefore, the rank should adaptively increase in order to produce an accurate representation of the solution. While I understand the general idea of the paper I do not have an inuition for the math that is proposed. I hope that implementing the method will resolve this problem. 
+
+% Reading through this paper made me realize how little inuition I have for statistical mechanics. I don't fundamentally understand the form of the collision operator or why this equation models what it says it does. I also 
+
+% In the derication that you did in our meeting you got that the loss term had the form $C \rho f(\b v)$. I was following the derivation in \href{https://gyu-eun-lee.github.io/academic/gso_boltzmann.pdf}{this article}. I see that we get a constant from rescaling the equation. I am not certain where the $\rho$ comes from. Also $\rho$ typically denotes density but it seems that it should be
