@@ -1,18 +1,18 @@
 # Fdb version 4
-["bibtex 2_12_24"] 1708040212 "2_12_24.aux" "2_12_24.bbl" "2_12_24" 1708040512 0
+["bibtex 2_12_24"] 1708040212 "2_12_24.aux" "2_12_24.bbl" "2_12_24" 1708721670 0
   "./refs.bib" 1707955246 1990 a69b51ea17994352fed8b43eefa23b68 ""
-  "2_12_24.aux" 1708040511 4610 cfcb44f969ee4a4d56c2fdeb2e703d8b "pdflatex"
+  "2_12_24.aux" 1708721669 4610 cfcb44f969ee4a4d56c2fdeb2e703d8b "pdflatex"
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/bibtex/bst/bibtex/plain.bst" 1291864736 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
   (generated)
   "2_12_24.bbl"
   "2_12_24.blg"
   (rewritten before read)
-["pdflatex"] 1708040510 "c:/Users/damie/OneDrive/UW/research/jingwei/reports/2_24/2_12_24/2_12_24.tex" "2_12_24.pdf" "2_12_24" 1708040512 0
-  "2_12_24.aux" 1708040511 4610 cfcb44f969ee4a4d56c2fdeb2e703d8b "pdflatex"
+["pdflatex"] 1708721666 "c:/Users/damie/OneDrive/UW/research/jingwei/reports/2_24/2_12_24/2_12_24.tex" "2_12_24.pdf" "2_12_24" 1708721670 0
+  "2_12_24.aux" 1708721669 4610 cfcb44f969ee4a4d56c2fdeb2e703d8b "pdflatex"
   "2_12_24.bbl" 1708040212 462 9b42422da025d01025a979f078c1f99d "bibtex 2_12_24"
-  "2_12_24.out" 1708040511 2258 b0f3084bc63c9b6c04d21c5a564d720e "pdflatex"
-  "2_12_24.tex" 1708040510 14028 0fd63f6629eafc3b103e78ab29af15e1 ""
-  "C:/Users/damie/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1705614081 83922 b13af8f876539d84ff334ee7f6e7250d ""
+  "2_12_24.out" 1708721669 2258 b0f3084bc63c9b6c04d21c5a564d720e "pdflatex"
+  "2_12_24.tex" 1708721666 14028 0fd63f6629eafc3b103e78ab29af15e1 ""
+  "C:/Users/damie/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1708123538 97591 1b1f0996fbb0ab847212b73e1024fde0 ""
   "C:/Users/damie/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1644708115 9769967 aa9fb1fc023ff14bec81a350b3fecd44 ""
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1233951848 1004 54797486969f23fa377b128694d548df ""
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1233951848 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -127,7 +127,7 @@
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/tex/latex/tools/multicol.sty" 1636710260 32262 2bb622a0aa56c4a7a5cbdfe9d122c15a ""
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/damie/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1636284872 56029 3f7889dab51d620aa43177c391b7b190 ""
-  "c:/Users/damie/OneDrive/UW/research/jingwei/reports/2_24/2_12_24/2_12_24.tex" 1708040510 14028 0fd63f6629eafc3b103e78ab29af15e1 ""
+  "c:/Users/damie/OneDrive/UW/research/jingwei/reports/2_24/2_12_24/2_12_24.tex" 1708721666 14028 0fd63f6629eafc3b103e78ab29af15e1 ""
   "imgs/initial_distributions.png" 1707864739 86684 c82e5479d55390bd2d8a1de1faef28f9 ""
   "imgs/iter0.png" 1708035703 30598 63df80e226873c3a748963adeb13402c ""
   "imgs/iter1.png" 1708035715 34879 1cef4e94225dc020a208472a74845975 ""
