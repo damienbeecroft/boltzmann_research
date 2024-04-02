@@ -93,8 +93,7 @@ This results in the following update scheme.
 \end{gather*}
 \subsubsection{Boundary Conditions}
 Again, the boundary conditions for this method are slightly complicated due to the fact that positive and negative advection velocities are present in the equation. Let Consider a 1D slice of $f$: $f_{*,j,k}$. If $0 < v_{j,k}$, then information is advecting from left to right. For these cases we set Dirichlet boundary conditions on the left. For the normal shock problem the left BC is $\lim_{x \to -\infty} f := f_L$. We do not set boundary conditions on the right. We simply let the flow advect out of the domain. If $0 > v_{j,k}$, then information is advecting from right to left. For these cases we set Dirichlet boundary conditions on the right. For the normal shock problem the right BC is $\lim_{x \to \infty} f = f_R$. We do not set boundary conditions on the left. We simply let the flow advect out of the domain.
-\subsection{Results}
-\subsubsection{Implicit Time-Stepping}
+\section{Time Stepping Results}
 \begin{figure}[H]
   \centering
   \begin{subfigure}[b]{\textwidth}

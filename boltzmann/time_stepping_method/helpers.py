@@ -55,7 +55,7 @@ def CBoltz2_Carl_Maxwell(f, N, R, L, Ntheta):
     N # of Fourier modes: f(N,N), Q(N,N)
     theta: mid-point rule
     """
-    start_time = time.time()
+    # start_time = time.time()
     temp = np.concatenate((np.arange(0,N//2),np.arange(-N//2,0,1)))
     l1 = np.array([[row]*N for row in temp])
     l2 = l1.T

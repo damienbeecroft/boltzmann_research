@@ -3,23 +3,35 @@ import pickle as rick
 from numba import njit
 import matplotlib.pyplot as plt
 from helpers import Qplus, CBoltz2_Carl_Maxwell
+from matplotlib.colors import LinearSegmentedColormap
+
 
 # For setting breakpoints at warnings
 import warnings
 warnings.filterwarnings('error')
 
+# Make relevant directories
+import os
+
+directory_path = 'C:/Users/damie/OneDrive/UW/research/jingwei/boltzmann/lax_friedrichs_method/lf_outputs/temp/'
+
+if not os.path.exists(directory_path):
+    os.makedirs(directory_path + 'plots/')
+    for slice in [0,25,50,75,100]:
+        os.makedirs(directory_path + f'slice{slice}/')
+
 # Variables to be set before running ########################################################
 save_me = True # Do you want to save the intermediate solution data for plotting?
 save_freq = 1 # Frequency at which the state of the system is saved
-max_iter = 1000 # Maximum number of iterations for the method
+max_iter = 10000 # Maximum number of iterations for the method
 C = 1 # Constant from rescaling of the loss collision term (not sure what this should be)
 Lx = 60 # The length of the spatial domain. The interval will be [-30,30]
 Nx = 100 # The resolution of the spatial grid
 Lv = 26.22 # Length of the velocity interval for both dimensions. The interval will be [-13.11,13.11]
 Nv = 32 # Number of collocation points in each dimension of the velocity domain
 Ntheta = 4 # Number of collocation points to integrate over for circle integral in collision operator
-v = 1 # Advection velocity of the equation
-R = 1; d = 2; gamma = 1; a = 0.5 # Refer to the paper for the significance of these variables
+# v = 1 # Advection velocity of the equation
+Boltz = 1; d = 2; gamma = 2; a = 0.5 # Refer to the paper for the significance of these variables
 ML = 1.4 # Mach number
 pL = 1 # Left density condition
 pR = 3 * ML**2 / (ML**2 + 2) # Right density condition
@@ -31,14 +43,18 @@ u0 = lambda x: (np.tanh(a * x) + 1)/(2*(uR - uL)) + uL # Initial bulk x-velocity
 TL = 1 # Left temperature condition
 TR = (4 * ML**2 - 1)/(3 * pR) # Right temperature condition
 T0 = lambda x: (np.tanh(a * x) + 1)/(2*(TR - TL)) + TL # Initial temperature profile
-f0 = lambda X, V1, V2: p0(X) * np.exp(-((V1 - u0(X))**2 + V2**2)/(2* R * T0(X))) / ((2 * np.pi * R * T0(X))**(d/2)) # Initial particle phase space distribution
+f0 = lambda X, V1, V2: p0(X) * np.exp(-((V1 - u0(X))**2 + V2**2)/(2 * Boltz * T0(X))) / ((2 * np.pi * Boltz * T0(X))**(d/2)) # Initial particle phase space distribution
 # Initialize grids
 xb = np.linspace(-Lx/2,Lx/2,Nx) # spatial cell boundaries
 dx = xb[1] - xb[0]
 x_grid = np.concatenate(([-dx/2 + xb[0]], xb + (dx/2))) # spatial cell centers
 n = x_grid.size
-v_grid = np.linspace(-Lv/2,Lv/2,Nv)
-dt = (0.5 * dx)/(Lv/2)
+dv = Lv / Nv
+v_grid = np.arange(-Lv/2 + dv / 2, Lv/2, dv)
+dt = (0.9 * dx)/(Lv/2)
+S = Lv/(3 + np.sqrt(2))
+# S = Lv/(3 * np.sqrt(2) + 1)
+R = 2*S
 X, V1, V2 = np.meshgrid(x_grid,v_grid,v_grid,indexing='ij')
 V = V1[0,:,:]
 #############################################################################################
@@ -71,14 +87,84 @@ def sweep(f): # sweeping method for the Boltzmann equation
 
     return f
 
+# def print_f(f,iter):
+#     j = 13
+#     k = 13
+#     p = get_p(f) 
+#     u1, u2 = get_u(f,p)
+#     T = get_T(f,p,u1,u2)
+#     Qplus_grid = get_Qplus_grid(f) # Implicit time-stepping
+#     Q_grid = get_Q_grid(f) # Explicit time-stepping
+
+#     plt.figure(figsize=(10,5))
+#     plt.subplots_adjust(bottom=0.3)  # Increase the value to add more space
+#     plt.subplot(121)
+#     plt.plot(x_grid,(p - pL)/(pR - pL),label = 'Normalized Density')
+#     plt.plot(x_grid,(u1 - uR)/(uL - uR),label = 'Normalized Bulk Velocity 1')
+#     plt.plot(x_grid,(T - TL)/(TR - TL),label = 'Normalized Temperature')
+#     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center')
+#     plt.title('Physical Flow Values')
+#     plt.subplot(122)
+#     var = '{:.3f}'.format(V[j,k])
+#     plt.plot(x_grid,f[:,j,k],label = f'Solution Slice with Velocity {var}')
+#     plt.plot(x_grid,Q_grid[:,j,k], label = 'Explicit Collision')
+#     plt.plot(x_grid,Qplus_grid[:,j,k] - C * p * f[:,j,k], label = 'Implicit Collision')
+#     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center')
+#     plt.title(f'f[:,{j},{k}] and Q[:,{j},{k}]')
+    
+#     plt.suptitle(f'Data at Iteration {iter}')
+#     plt.savefig(f'C:/Users/damie/OneDrive/UW/research/jingwei/boltzmann/lax_friedrichs_method/lf_outputs/output_implicit/{iter}')
+#     print(np.max(f))
+
+#     return
+
 def print_f(f,iter):
-    j = 13
-    k = 13
+    j = 17
+    k = 17
     p = get_p(f) 
     u1, u2 = get_u(f,p)
     T = get_T(f,p,u1,u2)
-    Qplus_grid = get_Qplus_grid(f) # Implicit time-stepping
     Q_grid = get_Q_grid(f) # Explicit time-stepping
+    Qplus_grid = get_Qplus_grid(f) # Implicit time-stepping
+
+    cmap1 = LinearSegmentedColormap.from_list(
+    'custom_cmap', [(0, 'white'), (1, 'red')])
+    cmap2 = LinearSegmentedColormap.from_list(
+    'custom_cmap', [(0, 'blue'), (0.5, 'white'), (1, 'red')])
+
+    for slice in [0,25,50,75,100]:
+        min_Q = np.min(Q_grid[slice,:,:])
+        max_Q = np.max(Q_grid[slice,:,:])
+        Q_bd = np.max([-min_Q,max_Q])
+        Qimp = Qplus_grid[slice,:,:] - C * p[slice] * f[slice,:,:]
+        min_Qimp = np.min(Qimp)
+        max_Qimp = np.max(Qimp)
+        Qimp_bd = np.max([-min_Qimp,max_Qimp])
+        min_f = np.min(f[slice,:,:])
+        max_f = np.min(f[slice,:,:])
+        f_bd = np.max([-min_f,max_f])
+        fig, axs = plt.subplots(1,3,figsize=(15,5))
+        # plt.subplot(121)
+        var = '{:.3f}'.format(X[slice,0,0])
+        var2 = '{:.3f}'.format(iter*dt)
+        fig.suptitle(f'Slice through x={var}: Time = {var2}, Iteration = {iter}')
+        im0 = axs[0].imshow(f[slice,:,:], extent = [-Lv/2,Lv/2,-Lv/2,Lv/2], cmap=cmap1, interpolation='nearest', vmin = 0,vmax = f_bd)
+        axs[0].set_title('f')
+        axs[0].set_ylabel(r'$v_1$')
+        axs[0].set_xlabel(r'$v_2$')
+        fig.colorbar(im0,ax=axs[0])
+        im1 = axs[1].imshow(Q_grid[slice,:,:], extent = [-Lv/2,Lv/2,-Lv/2,Lv/2], cmap=cmap2, interpolation='nearest',vmin = -Q_bd,vmax = Q_bd)
+        axs[1].set_title('Q')
+        # axs[1].set_ylabel(r'$v_1$')
+        axs[1].set_xlabel(r'$v_2$')
+        fig.colorbar(im1,ax=axs[1])
+        im2 = axs[2].imshow(Qplus_grid[slice,:,:] - C * p[slice] * f[slice,:,:], extent = [-Lv/2,Lv/2,-Lv/2,Lv/2], cmap=cmap2, interpolation='nearest',vmin = -Qimp_bd,vmax = Qimp_bd)
+        axs[2].set_title(r'$Q^+ - C \rho f$')
+        # axs[2].set_ylabel(r'$v_1$')
+        axs[2].set_xlabel(r'$v_2$')
+        fig.colorbar(im2,ax=axs[2])
+        plt.savefig(f'C:/Users/damie/OneDrive/UW/research/jingwei/boltzmann/lax_friedrichs_method/lf_outputs/temp/slice{slice}/mat{iter}')
+        plt.close()
 
     plt.figure(figsize=(10,5))
     plt.subplots_adjust(bottom=0.3)  # Increase the value to add more space
@@ -87,20 +173,23 @@ def print_f(f,iter):
     plt.plot(x_grid,(u1 - uR)/(uL - uR),label = 'Normalized Bulk Velocity 1')
     plt.plot(x_grid,(T - TL)/(TR - TL),label = 'Normalized Temperature')
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center')
+    plt.xlabel('x')
     plt.title('Physical Flow Values')
     plt.subplot(122)
     var = '{:.3f}'.format(V[j,k])
-    plt.plot(x_grid,f[:,j,k],label = f'Solution Slice with Velocity {var}')
-    plt.plot(x_grid,Q_grid[:,j,k], label = 'Explicit Collision')
-    plt.plot(x_grid,Qplus_grid[:,j,k] - C * p * f[:,j,k], label = 'Implicit Collision')
+    plt.plot(x_grid,f[:,j,k],label = f'f[:,{j},{k}] (Velocity = {var})')
+    plt.plot(x_grid,Qplus_grid[:,j,k] - C * p * f[:,j,k], label = rf'$Q^+[:,{j},{k}] - C \rho f[:,{j},{k}]$')
+    # plt.plot(x_grid,Q_grid[:,j,k], label = f'Q[:,{j},{k}]')
+    plt.xlabel('x')
     plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center')
-    plt.title(f'f[:,{j},{k}] and Q[:,{j},{k}]')
-    
-    plt.suptitle(f'Data at Iteration {iter}')
-    plt.savefig(f'C:/Users/damie/OneDrive/UW/research/jingwei/boltzmann/lax_friedrichs_method/lf_outputs/output_implicit/{iter}')
-    print(np.max(f))
+    plt.title(f'Phase Space Slice')
+    plt.suptitle(f'Data at Time = {var2}, Iteration = {iter}')
 
+    plt.savefig(f'C:/Users/damie/OneDrive/UW/research/jingwei/boltzmann/lax_friedrichs_method/lf_outputs/temp/plots/plot{iter}')
+    plt.close()
+    print(iter)
     return
+
 
 # @njit  
 def get_Q_grid(f): # get the gain term of the collision operator on the grid
@@ -142,7 +231,7 @@ def get_T(f,p,u1,u2): # get the temperature
     nrg = 0.5 * f * (V1**2 + V2**2) # haha 'nrg' get it? I am so funny
     total_nrg = np.trapz(nrg, x=v_grid, axis=1) # This integrates out V1 axis
     total_nrg = np.trapz(total_nrg, x=v_grid, axis=1) # This integrates out V2 axis
-    T = (total_nrg - 0.5 * p * (u1**2 + u2**2))/(R*p)
+    T = (total_nrg - 0.5 * p * (u1**2 + u2**2))/(Boltz*p)
 
     return T
 

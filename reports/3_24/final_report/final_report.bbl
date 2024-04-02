@@ -1,0 +1,14 @@
+\begin{thebibliography}{1}
+
+\bibitem{CHEN2013452}
+Weitao Chen, Ching-Shan Chou, and Chiu-Yen Kao.
+\newblock Lax–friedrichs fast sweeping methods for steady state problems for
+  hyperbolic conservation laws.
+\newblock {\em Journal of Computational Physics}, 234:452--471, 2013.
+
+\bibitem{hu2021adaptive}
+Jingwei Hu and Yubo Wang.
+\newblock An adaptive dynamical low rank method for the nonlinear boltzmann
+  equation, 2021.
+
+\end{thebibliography}
